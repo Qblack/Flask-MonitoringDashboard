@@ -47,6 +47,7 @@ steps:
       failTaskOnFailedTests: true
 
   - script: |
+      source $(System.DefaultWorkingDirectory)/venv/bin/activate
       export BUILD_NUMBER=$(Build.BuildId)
       export BUILD_TYPE=b
       python setup_micro.py bdist_wheel
@@ -55,6 +56,7 @@ steps:
     displayName: 'Build and upload Beta Package for Python $(python.version)'
 
   - script: |
+      source $(System.DefaultWorkingDirectory)/venv/bin/activate
       export BUILD_NUMBER=$(Build.BuildId)
       export BUILD_TYPE=rc
       python setup_micro.py bdist_wheel
@@ -63,6 +65,7 @@ steps:
     displayName: 'Build and upload Release Candidate Package for Python $(python.version)'
 
   - script: |
+      source $(System.DefaultWorkingDirectory)/venv/bin/activate
       python setup_micro.py bdist_wheel
       python -m twine upload -r "python-packages" --config-file $(PYPIRC_PATH) dist/*.whl --verbose
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/azure-pipelines'))
