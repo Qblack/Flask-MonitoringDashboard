@@ -37,7 +37,7 @@ steps:
   - script: |
       source $(System.DefaultWorkingDirectory)/venv/bin/activate
       set testErrors=%ERRORLEVEL%
-      py.test tests --junitxml=xuit.xml
+      py.test tests --junitxml=xunit.xml
     displayName: 'Tests'
 
   - task: PublishTestResults@2
@@ -68,5 +68,5 @@ steps:
   - script: |
       python setup_micro.py bdist_wheel
       python -m twine upload -r "python-packages" --config-file $(PYPIRC_PATH) dist/*.whl --verbose
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/azure-pipelines'))
     displayName: 'Build and upload Release Package for Python $(python.version)'
