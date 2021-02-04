@@ -1,0 +1,72 @@
+variables:
+  project_name: flask-monitoring-dashboard
+
+#pool:
+#  vmImage: ubuntu-latest
+#  demands: java
+
+pool:
+  name: Devops-testing
+  demands: java
+
+trigger:
+  branches:
+    include:
+      - '*'  # must quote since "*" is a YAML reserved character; we want a string
+
+steps:
+  #Your build pipeline references an undefined variable named ‘Parameters.cliSources’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+  - task: TwineAuthenticate@1
+    displayName: 'Twine Authenticate'
+    inputs:
+      artifactFeed: 'CATTOOLS/python-packages'
+
+  - task: PipAuthenticate@1
+    displayName: 'Pip Authenticate'
+    inputs:
+      artifactFeeds: 'CATTOOLS/python-packages'
+
+  - script: |
+      virtualenv -p python3 $(System.DefaultWorkingDirectory)/venv
+      source $(System.DefaultWorkingDirectory)/venv/bin/activate
+      python -m pip install --upgrade pip
+      pip install pyflakes nose pylint coverage twine wheel wfastcgi
+      pip install -r requirements-dev.txt
+    displayName: 'Setup env with pip'
+
+  - script: |
+      source $(System.DefaultWorkingDirectory)/venv/bin/activate
+      set testErrors=%ERRORLEVEL%
+      py.test tests --junitxml=xuit.xml
+    displayName: 'Tests'
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results **/xunit.xml'
+    inputs:
+      testResultsFiles: '**/xunit.xml'
+      failTaskOnFailedTests: true
+
+  - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
+    displayName: ReportGenerator
+
+  - script: |
+      export BUILD_NUMBER=$(Build.BuildId)
+      export BUILD_TYPE=b
+      python setup_micro.py bdist_wheel
+      python -m twine upload -r "python-packages" --config-file $(PYPIRC_PATH) dist/*.whl --verbose
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'Manual'), not(eq(variables['Build.SourceBranch'], 'refs/heads/tartarus')), not(eq(variables['Build.SourceBranch'], 'refs/heads/main')))
+    displayName: 'Build and upload Beta Package for Python $(python.version)'
+
+  - script: |
+      export BUILD_NUMBER=$(Build.BuildId)
+      export BUILD_TYPE=rc
+      python setup_micro.py bdist_wheel
+      python -m twine upload -r "python-packages" --config-file $(PYPIRC_PATH) dist/*.whl --verbose
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/tartarus'))
+    displayName: 'Build and upload Release Candidate Package for Python $(python.version)'
+
+  - script: |
+      python setup_micro.py bdist_wheel
+      python -m twine upload -r "python-packages" --config-file $(PYPIRC_PATH) dist/*.whl --verbose
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    displayName: 'Build and upload Release Package for Python $(python.version)'
