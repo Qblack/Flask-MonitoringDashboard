@@ -46,9 +46,6 @@ steps:
       testResultsFiles: '**/xunit.xml'
       failTaskOnFailedTests: true
 
-  - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
-    displayName: ReportGenerator
-
   - script: |
       export BUILD_NUMBER=$(Build.BuildId)
       export BUILD_TYPE=b
